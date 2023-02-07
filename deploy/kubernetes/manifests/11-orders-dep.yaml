@@ -18,7 +18,8 @@ spec:
     spec:
       containers:
       - name: orders
-        image: weaveworksdemos/orders:0.4.7
+        #image: weaveworksdemos/orders:0.4.7
+        image: 625011733915.dkr.ecr.ap-northeast-1.amazonaws.com/microservices-demo/orders:lattice-20230203-055209
         env:
          - name: JAVA_OPTS
            value: -Xms64m -Xmx128m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom -Dspring.zipkin.enabled=false
@@ -48,4 +49,4 @@ spec:
           emptyDir:
             medium: Memory
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
