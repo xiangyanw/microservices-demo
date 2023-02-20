@@ -1,0 +1,54 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: orders
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: orders
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  serviceDiscovery:
+    dns:
+      hostname: orders.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: orders
+  namespace: sock-shop
+spec:
+  awsName: orders.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: orders
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: orders
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: orders
+      priority: 10
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: orders
+              weight: 100

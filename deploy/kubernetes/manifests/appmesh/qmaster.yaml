@@ -1,0 +1,54 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: queue-master
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: queue-master
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  serviceDiscovery:
+    dns:
+      hostname: queue-master.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: queue-master
+  namespace: sock-shop
+spec:
+  awsName: queue-master.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: queue-master
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: queue-master
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: queue-master
+      priority: 10
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: queue-master
+              weight: 100

@@ -1,0 +1,68 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: rabbitmq
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: rabbitmq
+  listeners:
+    - portMapping:
+        port: 5672
+        protocol: tcp
+    - portMapping:
+        port: 9090
+        protocol: tcp
+  serviceDiscovery:
+    dns:
+      hostname: rabbitmq.sock-shop.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: rabbitmq
+  namespace: sock-shop
+spec:
+  awsName: rabbitmq.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: rabbitmq
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: rabbitmq
+spec:
+  listeners:
+    - portMapping:
+        port: 5672
+        protocol: tcp
+    - portMapping:
+        port: 9090
+        protocol: tcp
+  routes:
+    - name: rabbitmq
+      priority: 10
+      tcpRoute:
+        match:
+          port: 5672
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: rabbitmq
+              weight: 100
+              port: 5672
+    - name: exporter
+      priority: 10
+      tcpRoute:
+        match:
+          port: 9090
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: rabbitmq
+              weight: 100
+              port: 9090

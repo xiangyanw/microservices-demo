@@ -2,30 +2,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment
+  name: catalogue
   labels:
-    name: payment
-  namespace: sock-shop
+    name: catalogue
+      #namespace: sock-shop
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: payment
+      name: catalogue
   template:
     metadata:
+      annotations:
+        appmesh.k8s.aws/mesh: sock-shop
       labels:
-        name: payment
+        name: catalogue
     spec:
       containers:
-      - name: payment
-        image: weaveworksdemos/payment:0.4.3
-        command: ['/app', '-port=8080']
+      - name: catalogue
+        image: weaveworksdemos/catalogue:0.3.5
+        command: ["/app"]
+        args:
+        - -port=80
+        - -DSN=root:fake_password@tcp(catalogue-db.sock-shop-db:3306)/socksdb
         resources:
           limits:
             cpu: 200m
             memory: 200Mi
           requests:
-            cpu: 99m
+            cpu: 100m
             memory: 100Mi
         ports:
         - containerPort: 80
@@ -52,3 +57,4 @@ spec:
           periodSeconds: 3
       nodeSelector:
         kubernetes.io/os: linux
+

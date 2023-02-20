@@ -1,0 +1,134 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sock-shop
+  labels:
+    mesh: sock-shop
+    appmesh.k8s.aws/sidecarInjectorWebhook: enabled
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: Mesh
+metadata:
+  name: sock-shop
+spec:
+  namespaceSelector:
+    matchLabels:
+      mesh: sock-shop
+  egressFilter:
+    type: ALLOW_ALL
+---
+#apiVersion: appmesh.k8s.aws/v1beta2
+#kind: VirtualNode
+#metadata:
+#  name: catalog
+#  namespace: sock-shop
+#spec:
+#  podSelector:
+#    matchLabels:
+#      name: catalogue
+#  listeners:
+#    - portMapping:
+#        port: 80
+#        protocol: http
+#  backends:
+#    - virtualService:
+#        virtualServiceRef:
+#          name: catalog
+#  serviceDiscovery:
+#    dns:
+#      hostname: catalog.sock-shop.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: catalog-v1
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: catalogue
+      version: v1
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/health'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: catalog-v1.sock-shop.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: catalog-v2
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: catalogue
+      version: v2
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/health'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: catalog-v2.sock-shop.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: catalog
+  namespace: sock-shop
+spec:
+  awsName: catalog.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: catalog
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: catalog
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: v1
+      priority: 10
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: catalog-v1
+              weight: 90
+    - name: v2
+      priority: 20
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: catalog-v2
+              weight: 10

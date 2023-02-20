@@ -1,0 +1,50 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: catalogue-db
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: catalogue-db
+  listeners:
+    - portMapping:
+        port: 3306
+        protocol: tcp
+  serviceDiscovery:
+    dns:
+      hostname: catalogue-db.sock-shop.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: catalogue-db
+  namespace: sock-shop
+spec:
+  awsName: catalogue-db.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: catalogue-db
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: catalogue-db
+spec:
+  listeners:
+    - portMapping:
+        port: 3306
+        protocol: tcp
+  routes:
+    - name: catalogue-db
+      priority: 10
+      tcpRoute:
+        match:
+          port: 3306
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: catalogue-db
+              weight: 100

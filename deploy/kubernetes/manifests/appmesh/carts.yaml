@@ -1,0 +1,74 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: carts
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: carts
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+      timeout:
+        http:
+          perRequest:
+            unit: s
+            value: 6
+  serviceDiscovery:
+    dns:
+      hostname: carts.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: carts
+  namespace: sock-shop
+spec:
+  awsName: carts.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: carts
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: carts
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: carts
+      priority: 10
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: carts
+              weight: 100
+        timeout:
+          perRequest:
+            unit: s
+            value: 6
+        retryPolicy:
+          maxRetries: 5
+          perRetryTimeout:
+            unit: s
+            value: 1
+          httpRetryEvents:
+            - server-error
+            - gateway-error
+            - stream-error
+          tcpRetryEvents:
+            - connection-error

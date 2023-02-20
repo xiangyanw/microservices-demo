@@ -1,0 +1,82 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: front-end
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: front-end
+  listeners:
+    - portMapping:
+        port: 8079
+        protocol: http
+      timeout:
+        http:
+          perRequest:
+            unit: s
+            value: 8
+      healthCheck:
+        protocol: http
+        path: '/'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: front-end.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: front-end
+  namespace: sock-shop
+spec:
+  awsName: front-end.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: front-end
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: front-end
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: front-end
+      priority: 10
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: front-end
+              weight: 100
+        timeout:
+          perRequest:
+            unit: s
+            value: 8
+        retryPolicy:
+          maxRetries: 5
+          perRetryTimeout:
+            unit: s
+            value: 2
+          httpRetryEvents:
+            - server-error
+            - gateway-error
+            - stream-error
+            - client-error
+          tcpRetryEvents:
+            - connection-error

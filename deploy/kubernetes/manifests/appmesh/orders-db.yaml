@@ -1,0 +1,54 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: orders-db
+  namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: orders-db
+  listeners:
+    - portMapping:
+        port: 27017
+        protocol: tcp
+  serviceDiscovery:
+    dns:
+      hostname: orders-db.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: orders-db
+  namespace: sock-shop
+spec:
+  awsName: orders-db.sock-shop.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: orders-db
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: sock-shop
+  name: orders-db
+spec:
+  listeners:
+    - portMapping:
+        port: 27017
+        protocol: tcp
+  routes:
+    - name: orders-db
+      priority: 10
+      tcpRoute:
+        match:
+          port: 27017
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: orders-db
+              weight: 100

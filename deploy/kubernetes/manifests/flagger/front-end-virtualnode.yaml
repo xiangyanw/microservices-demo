@@ -1,0 +1,27 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: front-end-primary
+    #namespace: sock-shop
+spec:
+  podSelector:
+    matchLabels:
+      name: front-end-primary
+  listeners:
+    - portMapping:
+        port: 8079
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: front-end-primary.sock-shop.svc.cluster.local
+  logging:
+    accessLog:
+      file:
+        path: "/dev/stdout"

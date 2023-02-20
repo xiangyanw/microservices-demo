@@ -2,19 +2,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalogue
+  name: catalogue-v1
   labels:
     name: catalogue
-  namespace: sock-shop
+    version: v1
+      #namespace: sock-shop
 spec:
   replicas: 1
   selector:
     matchLabels:
       name: catalogue
+      version: v1
   template:
     metadata:
+      annotations:
+        appmesh.k8s.aws/mesh: sock-shop
       labels:
         name: catalogue
+        version: v1
     spec:
       containers:
       - name: catalogue
@@ -22,6 +27,7 @@ spec:
         command: ["/app"]
         args:
         - -port=80
+          #- -DSN=root:fake_password@tcp(catalogue-db.sock-shop-db:3306)/socksdb
         resources:
           limits:
             cpu: 200m
@@ -40,17 +46,80 @@ spec:
             add:
               - NET_BIND_SERVICE
           readOnlyRootFilesystem: true
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 300
-          periodSeconds: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 180
-          periodSeconds: 3
+            #        livenessProbe:
+            #          httpGet:
+            #            path: /health
+            #            port: 80
+            #fake_passwordinitialDelaySeconds: 300
+            #periodSeconds: 3
+            #readinessProbe:
+            #httpGet:
+            #path: /health
+            #port: 80
+            #initialDelaySeconds: 180
+            #periodSeconds: 3
+      nodeSelector:
+        kubernetes.io/os: linux
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue-v2
+  labels:
+    name: catalogue
+    version: v2
+      #namespace: sock-shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: catalogue
+      version: v2
+  template:
+    metadata:
+      annotations:
+        appmesh.k8s.aws/mesh: sock-shop
+      labels:
+        name: catalogue
+        version: v2
+    spec:
+      containers:
+      - name: catalogue
+        image: weaveworksdemos/catalogue:0.3.5
+        command: ["/app"]
+        args:
+        - -port=80
+          #- -DSN=root:fake_password@tcp(catalogue-db.sock-shop-db:3306)/socksdb
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 80
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - all
+            add:
+              - NET_BIND_SERVICE
+          readOnlyRootFilesystem: true
+            #livenessProbe:
+            #httpGet:
+            #path: /health
+            #port: 80
+            #initialDelaySeconds: 300
+            #periodSeconds: 3
+            #readinessProbe:
+            #httpGet:
+            #path: /health
+            #port: 80
+            #initialDelaySeconds: 180
+            #periodSeconds: 3
       nodeSelector:
         kubernetes.io/os: linux

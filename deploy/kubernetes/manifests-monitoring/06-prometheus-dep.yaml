@@ -22,7 +22,8 @@ spec:
       serviceAccount: prometheus
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.26.0
+        #image: prom/prometheus:v2.26.0
+        image: prom/prometheus:v2.36.1
         args:
         - '--storage.tsdb.retention=360h'
         - '--config.file=/etc/prometheus/prometheus.yml'
@@ -42,4 +43,4 @@ spec:
         configMap:
           name: prometheus-alertrules
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux

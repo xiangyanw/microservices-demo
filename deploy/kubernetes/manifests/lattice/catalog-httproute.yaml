@@ -1,0 +1,21 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: HTTPRoute
+metadata:
+  name: catalogue
+  namespace: sock-shop
+spec:
+  hostnames:
+  - catalogue.sock-shop.lattice
+  parentRefs:
+  - name: sock-shop
+    sectionName: catalogue
+  rules:
+  - backendRefs:  
+    - name: catalogue
+      #namespace: sock-shop
+      kind: ServiceImport
+      weight: 100
+    matches:
+    - path:
+        type: PathPrefix
+        value: /

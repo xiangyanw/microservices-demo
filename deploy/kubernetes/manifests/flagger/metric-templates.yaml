@@ -1,0 +1,19 @@
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: latency
+  namespace: flagger-system
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.monitoring:9090
+  query: |
+    histogram_quantile(0.99,
+      sum(
+        rate(
+          http_request_duration_seconds_bucket{
+            name="front-end",kubernetes_namespace="default"
+          }[{{ interval }}]
+        )
+      ) by (le)
+    )/1000
